@@ -251,6 +251,148 @@
     font-style: italic;
   }
   
+  /* ─────────── Autofill Search ─────────── */
+  .autofill-wrapper {
+    position: relative;
+  }
+  
+  .autofill-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 2px solid var(--forest);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(31, 77, 44, 0.15);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+  }
+  
+  .autofill-suggestions.show { display: block; }
+  
+  .autofill-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .autofill-item:last-child { border-bottom: none; }
+  
+  .autofill-item:hover,
+  .autofill-item.active {
+    background: var(--surface);
+  }
+  
+  .autofill-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  
+  .autofill-khoa {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--honey);
+    background: var(--honey-bg);
+    padding: 4px 10px;
+    border-radius: 100px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  
+  .autofill-khoa.no-class {
+    color: var(--muted);
+    background: #f0ede4;
+  }
+  
+  .autofill-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--error);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  
+  /* Verified state */
+  .verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: var(--forest);
+    color: var(--white);
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  
+  .verified-badge::before {
+    content: '✓';
+    font-weight: 700;
+  }
+  
+  .field-input.locked,
+  .field-textarea.locked {
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: not-allowed;
+  }
+  
+  .field-input.locked::placeholder { opacity: 0.5; }
+  
+  .lock-hint {
+    font-size: 12px;
+    color: var(--forest);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  
+  .lock-hint::before {
+    content: '🔒 ';
+  }
+  
+  .change-btn {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .change-btn:hover {
+    color: var(--forest);
+    border-color: var(--soft);
+  }
+  
+  /* Email manual input - khi DB không có email */
+  .email-manual-hint {
+    font-size: 13px;
+    color: var(--honey);
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: var(--honey-bg);
+    border-left: 3px solid var(--honey);
+    border-radius: 6px;
+    line-height: 1.5;
+  }
+  
   /* ─────────── Form Field ─────────── */
   .field {
     margin-bottom: 24px;
@@ -730,9 +872,14 @@
     </div>
 
     <div class="field">
-      <label class="field-label" for="hoTen">Họ và Tên<span class="required">*</span></label>
-      <input type="text" class="field-input" id="hoTen" placeholder="Vd: Đỗ Đức Quang" autocomplete="name">
-      <div class="error-msg" id="err-hoTen">Vui lòng nhập họ tên đầy đủ</div>
+      <label class="field-label" for="hoTen">Họ và Tên<span class="required">*</span><span id="verifiedBadge"></span></label>
+      <div class="field-hint">Gõ tên để tìm trong danh sách học viên HBCompro (hỗ trợ tìm có dấu hoặc không dấu)</div>
+      <div class="autofill-wrapper">
+        <input type="text" class="field-input" id="hoTen" placeholder="Vd: do duc quang hoặc Đỗ Đức Quang" autocomplete="off">
+        <div class="autofill-suggestions" id="suggestions"></div>
+      </div>
+      <div class="error-msg" id="err-hoTen">Vui lòng chọn tên trong danh sách HBCompro</div>
+      <div id="lockHintName" class="lock-hint" style="display:none;">Đã xác minh học viên HBCompro <span class="change-btn" onclick="resetVerification()">✏️ Đổi</span></div>
     </div>
 
     <div class="field">
@@ -745,10 +892,15 @@
       <label class="field-label" for="email">Email<span class="required">*</span></label>
       <input type="email" class="field-input" id="email" placeholder="Vd: ban@email.com" autocomplete="email">
       <div class="error-msg" id="err-email">Vui lòng nhập email hợp lệ</div>
+      <div id="lockHintEmail" class="lock-hint" style="display:none;">Email đã có trong hệ thống HBCompro</div>
+      <div id="emailManualHint" class="email-manual-hint" style="display:none;">
+        💡 An Giáo chưa có email của bạn trong hệ thống. Vui lòng nhập email để An Giáo có thể liên hệ phản hồi.
+      </div>
     </div>
 
     <div class="field">
       <label class="field-label">Bạn đã tham gia HBCompro khoá nào?<span class="required">*</span></label>
+      <div class="field-hint" id="khoaHint">Sẽ tự động chọn sau khi xác minh tên</div>
       <div class="radio-group" id="khoaGroup">
         <label class="radio-option" data-value="HB 2023">
           <input type="radio" name="khoa" value="HB 2023">
@@ -768,6 +920,7 @@
         </label>
       </div>
       <div class="error-msg" id="err-khoa">Vui lòng chọn khoá đã tham gia</div>
+      <div id="lockHintKhoa" class="lock-hint" style="display:none;">Khoá học đã xác minh từ danh sách HBCompro</div>
     </div>
 
     <div class="button-row">
@@ -946,9 +1099,207 @@
   // SHEET_URL sẽ được replace bởi Apps Script deployment URL
   window.SHEET_URL = 'https://script.google.com/macros/s/AKfycbx80B2eNn1Jrs87eM3DdDmCZxR82ZtghLL0aSB-q0lDDqxsQwaW8BGXZQ59zfAHTyf0/exec';
   
+  /* ─────────── Database HBCompro 192 học viên ─────────── */
+const DB = [
+  {n:"Quỳnh Nhi",e:"q.phuong9696@gmail.com",k:"HB2023"},
+  {n:"Nguyễn Thị Phước",e:"phuocnguyen7983@gmail.com",k:"HB2023"},
+  {n:"Nguyễn Thuý An",e:"",k:"HB2023"},
+  {n:"Nguyễn Tùng Lâm",e:"tunglam.mkt@gmail.com",k:"HB2023"},
+  {n:"Dương Cúc Linh",e:"duongcuclinh1988@gmail.com",k:"HB2023"},
+  {n:"Nguyễn Thị Trúc Phi",e:"nguyenthitrucphi@gmail.com",k:"HB2023"},
+  {n:"HOÀNG THỊ KIM NHUNG",e:"kinhdoanh4.0locphat@gmail.com",k:"HB2023"},
+  {n:"Đỗ Quốc Vinh",e:"nguoiconlethuy89@gmail.com",k:"HB2023"},
+  {n:"Ngô Xuân Quân",e:"Ngoxuanquan6868@gmail.com",k:"HB2023"},
+  {n:"Lê công hiệp",e:"conghiep1092@gmail.com",k:"HB2023"},
+  {n:"ĐỖ THỊ HUYỀN TRANG",e:"huyentrang290197@gmail.com",k:"HB2023"},
+  {n:"minn",e:"donguyenduythanh@gmail.com",k:"HB2023"},
+  {n:"Khánh",e:"teammktanvui@gmail.com",k:"HB2023"},
+  {n:"Lê văn phúc",e:"phucswiming@gmail.com",k:"HB2023"},
+  {n:"Trang Tran",e:"khanhtrangtran679@gmail.com",k:"HB2023"},
+  {n:"Lê Thanh Hương",e:"mocanhle2711@gmail.com",k:"HB2023"},
+  {n:"Ly Bui",e:"trucly.joj@gmail.com",k:"HB2023"},
+  {n:"Lê Thị Dần",e:"",k:"HB2023"},
+  {n:"Phạm Đình Duy",e:"",k:"HB2023"},
+  {n:"Đỗ Ngọc Diệp",e:"",k:"HB2023"},
+  {n:"Thanh An",e:"",k:"HB2023"},
+  {n:"Phạm Phương Thu",e:"",k:"HB2023"},
+  {n:"Hồng Hiếu",e:"",k:"HB2023"},
+  {n:"Camly Tran",e:"",k:"HB2023"},
+  {n:"Cao Hằng",e:"",k:"HB2023"},
+  {n:"Trịnh Hằng",e:"",k:"HB2023"},
+  {n:"Châu Thị Thuỳ Trang",e:"",k:"HB2023"},
+  {n:"Nguyen Thi Phuong Thuy",e:"",k:"HB2023"},
+  {n:"Hải Hà Đinh",e:"",k:"HB2023"},
+  {n:"Tú Linh Yoga",e:"",k:"HB2023"},
+  {n:"Cao Thị Thoa (Thoa Chec)",e:"Caothithoa.bkhn@gmail.com",k:"HB2023"},
+  {n:"Nguyễn Quỳnh Phương",e:"",k:"HB2023"},
+  {n:"Lê Diệu Linh",e:"",k:"HB2023"},
+  {n:"Tuyền Phạm",e:"",k:"HB2023"},
+  {n:"Trần Ngọc Ánh",e:"",k:"HB2023"},
+  {n:"Nguyễn Thị Thương",e:"",k:"HB2023"},
+  {n:"Vũ Duy Trọng",e:"voduytrong91138@gmail.com",k:"HB2023"},
+  {n:"Phuong Mai",e:"",k:"HB2023"},
+  {n:"Từ Thị Thu Hương",e:"",k:"HB2023"},
+  {n:"Nguyễn Lê Thuý",e:"",k:"HB2023"},
+  {n:"Trần Ánh Tuyết",e:"",k:"HB2023"},
+  {n:"Đàm Thuý Vân",e:"",k:"HB2023"},
+  {n:"Nguyễn Thị Kim Phượng",e:"",k:"HB2023"},
+  {n:"Nguyễn Thị Thảo",e:"",k:"HB2023"},
+  {n:"NGUYỄN XUÂN QUANG",e:"",k:"HB2023"},
+  {n:"Lê Minh Ngọc",e:"",k:"HB2023"},
+  {n:"Lê Thảo Yoga",e:"",k:"HB2023"},
+  {n:"Hường Nguyễn",e:"",k:"HB2023"},
+  {n:"Phương Dung Trị Rỗ",e:"",k:"HB2023"},
+  {n:"Nguyễn Tâm",e:"",k:"HB2023"},
+  {n:"Minh Hằng",e:"",k:"HB2023"},
+  {n:"Thu Trang Phạm",e:"",k:"HB2023"},
+  {n:"Nguyễn Thị Dung",e:"",k:"HB2023"},
+  {n:"Nguyễn Thị Hoài Thanh",e:"",k:"HB2023"},
+  {n:"Thẩm Mỹ Thái KT",e:"",k:"HB2023"},
+  {n:"Lê Thị Thảo",e:"",k:"HB2023"},
+  {n:"Trương Thị Thi",e:"",k:"HB2023"},
+  {n:"Kiều Thị Hồng Vân",e:"",k:"HB2023"},
+  {n:"Lê Kim Phượng",e:"",k:"HB2023"},
+  {n:"Nguyễn Thuỳ Dương",e:"",k:"HB2023"},
+  {n:"Nguyễn Dung",e:"",k:"HB2023"},
+  {n:"Kiều Nguyệt Nga",e:"",k:"HB2023"},
+  {n:"Thiên Bình - Phùng Thị Lịch",e:"",k:"HB2023"},
+  {n:"Trần Thị Điểm",e:"ellejolied210@gmail.com",k:"HB2023"},
+  {n:"Bùi Thu Phương",e:"",k:"HB2023"},
+  {n:"Đoàn Hà Hải Trình",e:"",k:"HB2023"},
+  {n:"Võ Kim Cương",e:"",k:"HB2023"},
+  {n:"Phan Thị Phương Mai",e:"",k:"HB2023"},
+  {n:"Kiều Pu",e:"Tranvandien6789@gmail.com",k:"HB2024"},
+  {n:"Trần Thị Lý",e:"tranly010691@gmail.com",k:"HB2024"},
+  {n:"Đại Nam",e:"Namnguyenvan28081995@gmail.com",k:"HB2024"},
+  {n:"Võ Nguyễn Ngọc Quỳnh",e:"ngocquynh41@gmail.com",k:"HB2024"},
+  {n:"Ngoan Ngoan",e:"truongthinhvuong.ntn2002@gmail.com",k:"HB2024"},
+  {n:"Vũ Thị Kim Hằng",e:"",k:"HB2024"},
+  {n:"Lã Hiền",e:"Lahien84hp@gmail.com",k:"HB2024"},
+  {n:"Phước Hoa",e:"",k:"HB2024"},
+  {n:"Phuong Anh Le",e:"thucduonggiadinh@gmail.com",k:"HB2024"},
+  {n:"Diễm Hương",e:"Yensaobinhphuocvn@gmail.com",k:"HB2024"},
+  {n:"Dược Sỹ Xuân Vy",e:"vmedical.planer@gmail.com",k:"HB2024"},
+  {n:"Ngọc Ánh Lê",e:"Ngocanhle1422@gmail.com",k:"HB2024"},
+  {n:"Nhung Đào",e:"thoitrang.tuannhung@gmail.com",k:"HB2024"},
+  {n:"Dung Bùi",e:"",k:"HB2024"},
+  {n:"phùng thị xuân sang",e:"vnxuansang@gmail.com",k:"HB2024"},
+  {n:"Linh Trần",e:"Taitran2009vp@gmail.com",k:"HB2024"},
+  {n:"Hong Nhien",e:"hongnhientrinh@gmail.com",k:"HB2024"},
+  {n:"Huyền HR",e:"",k:"HB2024"},
+  {n:"Linh Kolor",e:"linhdang0793@gmail.com",k:"HB2024"},
+  {n:"Đào Thị Thu Thảo",e:"",k:"HB2024"},
+  {n:"Phạm Ngọc Sơn",e:"",k:"HB2024"},
+  {n:"Huynh Phuong",e:"",k:"HB2024"},
+  {n:"Tuyen Dang",e:"",k:"HB2024"},
+  {n:"Trinh Tran",e:"",k:"HB2024"},
+  {n:"Nguyễn Thị Ngọc Lý",e:"nguyenthingocly198222@gmail.com",k:"HB2024"},
+  {n:"Trang Trang",e:"Trangthptvl@gmail.com",k:"HB2024"},
+  {n:"Hien Tran",e:"",k:"HB2024"},
+  {n:"Yến Chinh",e:"tranthiyentrinh2020pq@gmail.com",k:"HB2024"},
+  {n:"Phạm Lý",e:"phamthily.vta909@gmail.com",k:"HB2024"},
+  {n:"Lê Anh",e:"",k:"HB2024"},
+  {n:"Thanh Hà Nguyễn",e:"hanguyen.190979@gmail.com",k:"HB2024"},
+  {n:"Thương Nguyễn",e:"",k:"HB2024"},
+  {n:"Loan Vu Thi Thanh1",e:"",k:"HB2024"},
+  {n:"Thiên Bình",e:"truongthiphuongthao2012@gmail.com",k:"HB2024"},
+  {n:"Dahlia Nguyễn",e:"",k:"HB2024"},
+  {n:"Linh Đặng",e:"dangthuylinh89@gmail.com",k:"HB2024"},
+  {n:"Nguyễn Thị Hường",e:"huongnguyen511532@gmail.com",k:"HB2024"},
+  {n:"Nguyen Bao Ngoc",e:"surivamaika@gmail.com",k:"HB2024"},
+  {n:"Trang Tran",e:"",k:"HB2024"},
+  {n:"Nguyen Nu Bao Ngoc",e:"baongoc081982@gmail.com",k:"HB2024"},
+  {n:"Tuyết Nga",e:"",k:"HB2024"},
+  {n:"Thanh Thủy Lê",e:"",k:"HB2024"},
+  {n:"Béo Chaien",e:"",k:"HB2024"},
+  {n:"Nguyễn Hiền",e:"ngochien4636@gmail.com",k:"HB2024"},
+  {n:"Đỗ Thị Huyền",e:"dohuyen36779@gmail.com",k:"HB2024"},
+  {n:"Anna Hòa Nguyễn",e:"nguyenthihoa19882014@gmail.com",k:"HB2024"},
+  {n:"Đoàn Ngọc Khanh",e:"",k:"HB2024"},
+  {n:"Nhung Kun",e:"",k:"HB2024"},
+  {n:"Mai Mit Nguyen",e:"",k:"HB2024"},
+  {n:"Phương Duyên",e:"",k:"HB2024"},
+  {n:"Đỗ Thị Bích Liên",e:"",k:"HB2024"},
+  {n:"Trần Thị Thanh Thuỷ",e:"",k:"HB2024"},
+  {n:"Hien Nguyen",e:"",k:"HB2024"},
+  {n:"Phương Anh",e:"",k:"HB2024"},
+  {n:"Dang Hien",e:"",k:"HB2024"},
+  {n:"Tiệp Applestore",e:"",k:"HB2024"},
+  {n:"Thảo Trang",e:"",k:"HB2024"},
+  {n:"Tam Phan",e:"",k:"HB2024"},
+  {n:"Thu Thủy",e:"",k:"HB2024"},
+  {n:"Thuý Nguyễn",e:"",k:"HB2024"},
+  {n:"Lan Bui",e:"",k:"HB2024"},
+  {n:"Rubia Lê Ái Xuân",e:"",k:"HB2024"},
+  {n:"Trúc Trần",e:"",k:"HB2024"},
+  {n:"Tran Thanh Yen",e:"",k:"HB2024"},
+  {n:"Xuan Nguyen",e:"",k:"HB2024"},
+  {n:"Triệu Tuyết Mai",e:"",k:"HB2024"},
+  {n:"Chăn Ga Hậu Khiêm",e:"",k:"HB2024"},
+  {n:"Tú Diệu",e:"",k:"HB2024"},
+  {n:"Nguyễn Duyên",e:"",k:"HB2024"},
+  {n:"Xinh Gai Thuy Linh",e:"",k:"HB2024"},
+  {n:"Hoa Võ",e:"",k:"HB2024"},
+  {n:"Phuong Nguyen",e:"",k:"HB2024"},
+  {n:"Thanh Nga",e:"",k:"HB2024"},
+  {n:"Đinh Thanh Thuý",e:"thuythanhh91@gmail.com",k:"HB2024"},
+  {n:"Hồ Mến",e:"",k:"HB2024"},
+  {n:"Thanh Thuỳ",e:"",k:"HB2024"},
+  {n:"Võ Mình Tùng",e:"vominhtung2023@gmail.com",k:"HB2024"},
+  {n:"Trúc Phương",e:"",k:"HB2024"},
+  {n:"Đào Thanh Nga",e:"",k:"HB2024"},
+  {n:"Phạm Thúy Vân",e:"",k:"HB2024"},
+  {n:"Linh Linh",e:"",k:"HB2024"},
+  {n:"Phạm Ngọc",e:"",k:"HB2024"},
+  {n:"Hạnh Nguyễn",e:"",k:"HB2024"},
+  {n:"Nguyễn Thúy Hà",e:"thuyha2710@gmail.com",k:"HB2025"},
+  {n:"Võ Trần Huỳnh Tụ",e:"qtlethanh.dongxuan@gmail.com",k:"HB2025"},
+  {n:"Đỗ Vũ Duy Anh",e:"dovuanhduy@gmail.com",k:"HB2025"},
+  {n:"Trần Thị Xuân",e:"thixuantran194@gmail.com",k:"HB2025"},
+  {n:"Trầm Vĩnh An (An Yoga)",e:"antramvinh@gmail.com",k:"HB2025"},
+  {n:"Nguyễn Thị Diệu Phương",e:"dphuong83@gmail.com",k:"HB2025"},
+  {n:"Nguyễn Quốc Toàn",e:"nguyenquoctoan6989@gmail.com",k:"HB2025"},
+  {n:"Lê Thị Hệ",e:"lehe1986dpp@gmail.com",k:"HB2025"},
+  {n:"Đinh Thu Hiền",e:"docunhatrang2412@gmail.com",k:"HB2025"},
+  {n:"Đỗ Thị Hường",e:"dothihuongqtkdb93@gmail.com",k:"HB2025"},
+  {n:"Nông Thị Hiền (erina Hiền)",e:"nonghien1993bk@gmail.com",k:"HB2025"},
+  {n:"ĐỖ QUỲNH TRANG",e:"leetinhho@gmail.com",k:"HB2025"},
+  {n:"Nguyen Hoan",e:"nguyenhoan08021988@gmail.com",k:"HB2025"},
+  {n:"Phạm Hải Dương",e:"doanhnhanviet17@gmail.com",k:"HB2025"},
+  {n:"Nguyễn thị biên",e:"nguyenbien1608@gmail.com",k:"HB2025"},
+  {n:"Thoan Lê",e:"thoanlelethoan@gmail.com",k:"HB2025"},
+  {n:"Thảo trần (Úc)",e:"emmatran1905@gmail.com",k:"HB2025"},
+  {n:"Vân Anh (Úc)",e:"vutrinhvananh1988@gmail.com",k:"HB2025"},
+  {n:"Châu Bảo Vinh",e:"chaubaovinh@gmail.com",k:"HB2025"},
+  {n:"Đỗ Ánh Droppii",e:"honganhevaspa@gmail.com",k:"HB2025"},
+  {n:"Đặng Nguyễn Minh Đạt",e:"trumdat.official@gmail.com",k:"HB2025"},
+  {n:"Tạ Thị Hoa",e:"tahoa809@gmail.com",k:"HB2025"},
+  {n:"Ngọc Hạnh",e:"ngochanhvt2512@gmail.com",k:"HB2025"},
+  {n:"Ngô Thị Hạnh",e:"hanhbanlua1004@daum.net",k:"HB2025"},
+  {n:"Lâm Ngọc Phương",e:"phuongvuongtron@gmail.com",k:"HB2026"},
+  {n:"Phạm An",e:"giothoang1995ls@gmail.com",k:"HB2026"},
+  {n:"Văn Thọ Minh",e:"misako090715@gmail.com",k:"HB2026"},
+  {n:"Cẩm Nhung",e:"yogicamnhung@gmail.com",k:"HB2026"},
+  {n:"Lê Thị Ánh Hồng (Hồng xinh)",e:"",k:""},
+  {n:"Van Huynh",e:"mimihuynh1988205@gmail.com",k:"HB2026"},
+  {n:"Nguyễn Thị Trúc Giang",e:"qhktrucgiang@gmail.com",k:""},
+  {n:"Nguyễn Thị Thu Hiền",e:"nguyenthithuhien10091966@gmail.com",k:""},
+  {n:"Phan Thanh Trâm",e:"tramphan9494@gmail.com",k:"HB2026"},
+  {n:"Jessi To (Mỹ)",e:"thungocto1989@gmail.com",k:"HB2026"},
+  {n:"Trần Thị Vân Anh (Đức)",e:"tranthivananh911@gmail.com",k:"HB2026"},
+  {n:"Đỗ Thị Mỹ Hạnh",e:"Myhanhdo0696@gmail.com",k:"HB2026"},
+  {n:"Hoàng Linh",e:"thuynt14591@gmail.com",k:"HB2026"},
+  {n:"Nguyễn Vân Anh",e:"ngvananh13789@gmail.com",k:"HB2026"},
+  {n:"Trâm Anh",e:"Tramanh.nguyen96@gmail.com",k:"HB2026"},
+  {n:"Trần Thị Thu Hiền",e:"cogiaonho848@gmail.com",k:"HB2026"},
+  {n:"Đỗ Quang Test",e:"quangdo1911@gmail.com",k:"HB2026"},
+];
+  
   /* ─────────── State ─────────── */
   let currentPage = 1;
   const TOTAL_PAGES = 4;
+  let verifiedStudent = null;  // { n, e, k } khi đã xác minh
+  let activeIndex = -1;  // suggestion active for keyboard nav
   
   /* ─────────── Anti-zoom (4 layers) ─────────── */
   document.addEventListener('gesturestart', e => e.preventDefault());
@@ -966,9 +1317,245 @@
     if (e.touches.length > 1) e.preventDefault();
   }, { passive: false });
   
+  /* ─────────── Normalize Vietnamese ─────────── */
+  function normalize(s) {
+    return (s || '').toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "d")
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  
+  /* ─────────── Khoa display ─────────── */
+  function khoaDisplay(k) {
+    if (!k) return 'Chưa rõ khoá';
+    return k.replace('HB', 'HB ');
+  }
+  
+  function khoaToValue(k) {
+    // Map DB khoa → form value
+    if (!k) return '';
+    if (k === 'HB2023') return 'HB 2023';
+    if (k === 'HB2024') return 'HB 2024';
+    if (k === 'HB2025') return 'HB 2025';
+    if (k === 'HB2026') return ''; // HB2026 là khoá đang xét, chưa từng học → user tự chọn
+    return '';
+  }
+  
+  /* ─────────── Search DB ─────────── */
+  function searchDB(query) {
+    if (!query || query.length < 2) return [];
+    const q = normalize(query);
+    const matches = [];
+    
+    DB.forEach(item => {
+      const nameNorm = normalize(item.n);
+      // Match: name starts với query, hoặc bất kỳ word nào trong name match
+      if (nameNorm.includes(q) || nameNorm.split(' ').some(w => w.startsWith(q))) {
+        matches.push(item);
+      }
+    });
+    
+    // Sort: exact start match first, sau đó alphabetical
+    matches.sort((a, b) => {
+      const aStart = normalize(a.n).startsWith(q);
+      const bStart = normalize(b.n).startsWith(q);
+      if (aStart && !bStart) return -1;
+      if (!aStart && bStart) return 1;
+      return a.n.localeCompare(b.n, 'vi');
+    });
+    
+    return matches.slice(0, 8);  // max 8 suggestions
+  }
+  
+  /* ─────────── Render Suggestions ─────────── */
+  function renderSuggestions(matches) {
+    const sugBox = document.getElementById('suggestions');
+    
+    if (matches.length === 0) {
+      const query = document.getElementById('hoTen').value.trim();
+      if (query.length >= 2) {
+        sugBox.innerHTML = `<div class="autofill-empty">Không tìm thấy "${query}" trong danh sách HBCompro.<br>Vui lòng kiểm tra lại tên hoặc liên hệ Bé An để được hỗ trợ.</div>`;
+        sugBox.classList.add('show');
+      } else {
+        sugBox.classList.remove('show');
+      }
+      return;
+    }
+    
+    sugBox.innerHTML = matches.map((m, idx) => `
+      <div class="autofill-item" data-idx="${idx}" onclick="selectStudent(${idx})">
+        <span class="autofill-name">${m.n}</span>
+        <span class="autofill-khoa ${!m.k ? 'no-class' : ''}">${khoaDisplay(m.k)}</span>
+      </div>
+    `).join('');
+    
+    sugBox.classList.add('show');
+    sugBox._matches = matches;
+    activeIndex = -1;
+  }
+  
+  /* ─────────── Select Student (lock fields) ─────────── */
+  function selectStudent(idx) {
+    const sugBox = document.getElementById('suggestions');
+    const matches = sugBox._matches || [];
+    const student = matches[idx];
+    if (!student) return;
+    
+    verifiedStudent = student;
+    
+    // Fill name
+    const nameInput = document.getElementById('hoTen');
+    nameInput.value = student.n;
+    nameInput.classList.add('locked');
+    nameInput.readOnly = true;
+    nameInput.classList.remove('error');
+    
+    // Show verified badge
+    document.getElementById('verifiedBadge').innerHTML = `<span class="verified-badge">${khoaDisplay(student.k) || 'HBCompro'}</span>`;
+    document.getElementById('lockHintName').style.display = 'block';
+    document.getElementById('err-hoTen').classList.remove('show');
+    
+    // Email
+    const emailInput = document.getElementById('email');
+    if (student.e) {
+      emailInput.value = student.e;
+      emailInput.classList.add('locked');
+      emailInput.readOnly = true;
+      document.getElementById('lockHintEmail').style.display = 'block';
+      document.getElementById('emailManualHint').style.display = 'none';
+    } else {
+      emailInput.value = '';
+      emailInput.classList.remove('locked');
+      emailInput.readOnly = false;
+      emailInput.focus();
+      document.getElementById('lockHintEmail').style.display = 'none';
+      document.getElementById('emailManualHint').style.display = 'block';
+    }
+    emailInput.classList.remove('error');
+    document.getElementById('err-email').classList.remove('show');
+    
+    // Khoa
+    const khoaValue = khoaToValue(student.k);
+    if (khoaValue) {
+      document.querySelectorAll('input[name="khoa"]').forEach(r => r.checked = false);
+      document.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      
+      const targetRadio = document.querySelector(`input[name="khoa"][value="${khoaValue}"]`);
+      if (targetRadio) {
+        targetRadio.checked = true;
+        targetRadio.closest('.radio-option').classList.add('selected');
+      }
+      document.getElementById('lockHintKhoa').style.display = 'block';
+      document.getElementById('khoaHint').textContent = 'Đã tự động xác minh từ danh sách HBCompro';
+      document.getElementById('err-khoa').classList.remove('show');
+      
+      // Disable other radios
+      document.querySelectorAll('.radio-option').forEach(opt => {
+        opt.style.opacity = opt.classList.contains('selected') ? '1' : '0.5';
+        opt.style.pointerEvents = 'none';
+      });
+    } else {
+      // No class info - user select manually
+      document.getElementById('khoaHint').textContent = 'An Giáo chưa có thông tin khoá - vui lòng chọn khoá phù hợp';
+      document.querySelectorAll('.radio-option').forEach(opt => {
+        opt.style.opacity = '1';
+        opt.style.pointerEvents = 'auto';
+      });
+    }
+    
+    // Hide suggestions
+    document.getElementById('suggestions').classList.remove('show');
+    
+    // Focus next field (SDT)
+    setTimeout(() => document.getElementById('sdt').focus(), 100);
+  }
+  
+  /* ─────────── Reset Verification ─────────── */
+  function resetVerification() {
+    verifiedStudent = null;
+    
+    const nameInput = document.getElementById('hoTen');
+    nameInput.value = '';
+    nameInput.classList.remove('locked');
+    nameInput.readOnly = false;
+    
+    const emailInput = document.getElementById('email');
+    emailInput.value = '';
+    emailInput.classList.remove('locked');
+    emailInput.readOnly = false;
+    
+    document.getElementById('verifiedBadge').innerHTML = '';
+    document.getElementById('lockHintName').style.display = 'none';
+    document.getElementById('lockHintEmail').style.display = 'none';
+    document.getElementById('emailManualHint').style.display = 'none';
+    document.getElementById('lockHintKhoa').style.display = 'none';
+    document.getElementById('khoaHint').textContent = 'Sẽ tự động chọn sau khi xác minh tên';
+    
+    // Reset radio
+    document.querySelectorAll('input[name="khoa"]').forEach(r => r.checked = false);
+    document.querySelectorAll('.radio-option').forEach(o => {
+      o.classList.remove('selected');
+      o.style.opacity = '1';
+      o.style.pointerEvents = 'auto';
+    });
+    
+    nameInput.focus();
+  }
+  
+  /* ─────────── Hook input search ─────────── */
+  document.getElementById('hoTen').addEventListener('input', (e) => {
+    if (verifiedStudent) return;  // already verified, no search
+    const matches = searchDB(e.target.value);
+    renderSuggestions(matches);
+  });
+  
+  document.getElementById('hoTen').addEventListener('focus', (e) => {
+    if (verifiedStudent) return;
+    if (e.target.value.length >= 2) {
+      const matches = searchDB(e.target.value);
+      renderSuggestions(matches);
+    }
+  });
+  
+  // Click outside to close suggestions
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.autofill-wrapper')) {
+      document.getElementById('suggestions').classList.remove('show');
+    }
+  });
+  
+  // Keyboard nav for suggestions
+  document.getElementById('hoTen').addEventListener('keydown', (e) => {
+    const sugBox = document.getElementById('suggestions');
+    if (!sugBox.classList.contains('show')) return;
+    const items = sugBox.querySelectorAll('.autofill-item');
+    if (items.length === 0) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      selectStudent(activeIndex);
+    } else if (e.key === 'Escape') {
+      sugBox.classList.remove('show');
+    }
+  });
+  
   /* ─────────── Radio Group ─────────── */
   document.querySelectorAll('.radio-option').forEach(opt => {
-    opt.addEventListener('click', () => {
+    opt.addEventListener('click', (e) => {
+      // Only allow clicking if not locked by verification
+      if (verifiedStudent && verifiedStudent.k) return;
+      
       const group = opt.parentElement;
       group.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
@@ -979,11 +1566,17 @@
   
   /* ─────────── Checkbox ─────────── */
   document.getElementById('commitmentBox').addEventListener('click', e => {
+    e.preventDefault();  // Prevent default label behavior
     if (e.target.tagName === 'INPUT') return;
     const wrap = document.getElementById('commitmentBox');
     const input = document.getElementById('commitment');
     input.checked = !input.checked;
     wrap.classList.toggle('checked', input.checked);
+  });
+  
+  // Also handle direct input click
+  document.getElementById('commitment').addEventListener('change', e => {
+    document.getElementById('commitmentBox').classList.toggle('checked', e.target.checked);
   });
   
   /* ─────────── Page Navigation ─────────── */
@@ -1011,19 +1604,27 @@
   function validatePage(pageNum) {
     let valid = true;
     
-    const showError = (id, show = true) => {
+    const showError = (id, show = true, customMsg = null) => {
       const el = document.getElementById('err-' + id);
-      if (el) el.classList.toggle('show', show);
+      if (el) {
+        el.classList.toggle('show', show);
+        if (customMsg) el.textContent = customMsg;
+      }
       const input = document.getElementById(id);
       if (input) input.classList.toggle('error', show);
     };
     
     if (pageNum === 1) {
-      const hoTen = document.getElementById('hoTen').value.trim();
-      if (hoTen.length < 2) { showError('hoTen'); valid = false; } else showError('hoTen', false);
+      // STRICT: must be verified from DB
+      if (!verifiedStudent) {
+        showError('hoTen', true, 'Vui lòng chọn tên trong danh sách HBCompro (gõ tên và click vào suggestion)');
+        valid = false;
+      } else {
+        showError('hoTen', false);
+      }
       
       const sdt = document.getElementById('sdt').value.trim();
-      if (!/^[0-9]{9,11}$/.test(sdt.replace(/\s/g, ''))) { showError('sdt'); valid = false; } else showError('sdt', false);
+      if (!/^[0-9+\s()-]{9,20}$/.test(sdt)) { showError('sdt', true, 'Vui lòng nhập số điện thoại hợp lệ (9-20 ký tự)'); valid = false; } else showError('sdt', false);
       
       const email = document.getElementById('email').value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('email'); valid = false; } else showError('email', false);
@@ -1067,6 +1668,13 @@
   
   /* ─────────── Submit ─────────── */
   async function submitForm() {
+    // STRICT: must be verified
+    if (!verifiedStudent) {
+      alert('Vui lòng quay lại Phần 1 và chọn tên trong danh sách HBCompro để xác minh.');
+      goToPage(1);
+      return;
+    }
+    
     const commitment = document.getElementById('commitment').checked;
     if (!commitment) {
       document.getElementById('err-commitment').classList.add('show');
@@ -1094,11 +1702,12 @@
       xungDang: document.getElementById('xungDang').value.trim(),
       bangChung: document.getElementById('bangChung').value.trim(),
       cam_ket_chinh_thuc: 'Có',
+      verified_db: 'Yes',
+      verified_khoa_db: verifiedStudent.k || 'unknown',
       userAgent: navigator.userAgent
     };
     
     try {
-      // Apps Script (mode no-cors workaround for CORS)
       await fetch(window.SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -1106,7 +1715,6 @@
         body: JSON.stringify(data)
       });
       
-      // Always success (no-cors prevents reading response)
       setTimeout(() => {
         document.getElementById('loadingOverlay').classList.remove('show');
         goToPageSuccess();
@@ -1124,16 +1732,12 @@
     document.getElementById('page5').classList.add('active');
     document.getElementById('progressBar').style.width = '100%';
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Hide progress bar
     document.querySelector('.progress').style.display = 'none';
   }
   
-  /* ─────────── Auto-save (LocalStorage disabled for privacy) ─────────── */
-  // Form data ONLY saved on submit, no localStorage
-  
   /* ─────────── Init ─────────── */
-  console.log('🌻 Form Xét Duyệt HBCompro 2026 — Loaded');
+  console.log('🌻 Form Xét Duyệt HBCompro 2026 v2 — Loaded');
+  console.log('Database: ' + DB.length + ' học viên');
 </script>
 
 </body>
